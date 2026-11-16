@@ -62,6 +62,36 @@ sudo -u www-data php /var/www/html/cli.php passwd
 >
 > ⚠️ Apache 默认 `AllowOverride None`，项目自带的 `.htaccess` 不会生效，所以请务必按第 3 步配置，或者把数据目录放在网站根目录之外（第 2 步）。
 
+### 宝塔面板
+
+宝塔环境和上面有几处不同：PHP 是宝塔自己编译的，不带 php-rrd；站点默认开启了 `open_basedir`；FPM 禁用了 `proc_open`（命令行 PHP 不受影响）。下面以 PHP 8.2、站点目录 `/www/wwwroot/example.com` 为例：
+
+```bash
+# 1. 为宝塔的 PHP 编译 rrd 扩展
+apt install -y librrd-dev rrdtool pkg-config fonts-wqy-microhei
+cd /tmp && curl -sSLO https://pecl.php.net/get/rrd-2.0.3.tgz && tar xzf rrd-2.0.3.tgz && cd rrd-2.0.3
+/www/server/php/82/bin/phpize && ./configure --with-php-config=/www/server/php/82/bin/php-config && make && make install
+#    FPM 和命令行用的是两个不同的 ini，两个都要加
+for f in /www/server/php/82/etc/php.ini /www/server/php/82/etc/php-cli.ini; do printf '\n[rrd]\nextension = rrd.so\n' >> $f; done
+/etc/init.d/php-fpm-82 reload
+
+# 2. 数据目录保持默认的「站点目录/data」（open_basedir 只允许访问站点目录），交给 www 用户
+install -d -o www -g www -m 750 /www/wwwroot/example.com/data
+
+# 3. 拦截内部文件（宝塔默认规则已经拦截了 .git、README.md 等）
+mkdir -p /www/server/panel/vhost/nginx/extension/example.com
+cp deploy/bt-nginx-mc3.conf /www/server/panel/vhost/nginx/extension/example.com/mc3.conf
+nginx -t && nginx -s reload
+
+# 4. 每分钟采集（必须用 www 用户运行）
+echo '* * * * * www /www/server/php/82/bin/php /www/wwwroot/example.com/rrd_probe.php >/dev/null 2>&1' > /etc/cron.d/mc3
+
+# 5. 设置后台密码
+runuser -u www -- /www/server/php/82/bin/php /www/wwwroot/example.com/cli.php passwd
+```
+
+如果想在面板里管理采集任务，也可以在「计划任务 → Shell 脚本」里添加一个每分钟执行的任务，内容填 `runuser -u www -- /www/server/php/82/bin/php /www/wwwroot/example.com/rrd_probe.php`，这样就不用写第 4 步的 `/etc/cron.d/mc3`。宝塔的计划任务每次执行都会写一条日志，每分钟一次会比较多。
+
 ## 使用
 
 | 命令 | 作用 |

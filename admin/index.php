@@ -19,7 +19,10 @@ $checks = [
   [$hbAge !== null && $hbAge < 150, 'cron 采集',
     $hbAge === null ? '从未运行过。请添加 crontab：* * * * * php ' . MC3_ROOT . '/rrd_probe.php >/dev/null 2>&1'
       : '上次 ' . human_ago($hb['ts']) . '，耗时 ' . round($hb['duration_ms'] / 1000, 1) . ' 秒，' . $hb['targets'] . ' 个目标'],
-  [function_exists('proc_open'), '并发探测 (proc_open)', function_exists('proc_open') ? '可用' : '被禁用，将串行探测，目标多时可能超过 60 秒'],
+  // 采集跑在 CLI 下，以 heartbeat 里 CLI 上报的为准（宝塔等面板常在 FPM 中禁用 proc_open，但 CLI 不受影响）
+  [$cliProc = isset($hb['proc_open']) ? (bool)$hb['proc_open'] : (function_exists('proc_open') ? true : null),
+    '并发探测 (CLI proc_open)',
+    $cliProc === true ? '可用' : ($cliProc === null ? '等待首次采集后检测' : '命令行 PHP 禁用了 proc_open，将串行探测，目标多时可能超过 60 秒')],
   [!$ddInWeb ? true : null, '数据目录位置', $ddInWeb ? '位于 Web 根目录内，Apache 已用 .htaccess 拦截；nginx 需手动 deny（见 README），或在 config.php 中把 data_dir 移出' : '在 Web 根目录之外 ✓'],
 ];
 

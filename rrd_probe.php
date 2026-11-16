@@ -161,5 +161,6 @@ write_json(heartbeat_path(), [
   'duration_ms' => (int)round((microtime(true) - $t0) * 1000),
   'targets' => count($list),
   'php' => PHP_VERSION,
+  'proc_open' => function_exists('proc_open'),   // 采集用的是 CLI，FPM 里禁用 proc_open 不影响并发
 ]);
 flock($lock, LOCK_UN);
