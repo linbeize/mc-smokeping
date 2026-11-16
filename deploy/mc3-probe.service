@@ -1,0 +1,11 @@
+# /etc/systemd/system/mc3-probe.service
+[Unit]
+Description=MC Smokeping latency probe
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+ExecStart=/usr/bin/php /var/www/html/rrd_probe.php
+TimeoutStartSec=70

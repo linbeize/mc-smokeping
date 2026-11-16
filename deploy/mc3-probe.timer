@@ -1,0 +1,11 @@
+# /etc/systemd/system/mc3-probe.timer
+# systemctl daemon-reload && systemctl enable --now mc3-probe.timer
+[Unit]
+Description=Run MC Smokeping probe every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

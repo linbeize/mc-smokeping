@@ -1,0 +1,5 @@
+/data/
+*.rrd
+*.tmp*
+.DS_Store
+Thumbs.db
